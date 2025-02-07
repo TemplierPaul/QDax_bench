@@ -43,6 +43,11 @@ From: ubuntu:22.04
 	# Clone repository to /workdir/
 	git clone https://{{ github_user }}:{{ github_token }}@github.com/TemplierPaul/QDax_bench.git /workdir/
 	# git checkout {{ commit }}  
+
+	# QDax develop branch
+	git clone https://github.com/adaptive-intelligent-robotics/QDax.git /workdir/QDax
+	cd /workdir/QDax
+	git checkout develop
 	
 	# Output directory
 	mkdir -p /workdir/output

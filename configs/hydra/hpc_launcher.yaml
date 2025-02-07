@@ -30,4 +30,11 @@ launcher:
 sweeper:
   params:
     task: kh_standard, kh_pointmaze, kh_snake
+    task.stochastic: true
     algo: me
+
+# sweeper:
+#   params:
+#     task: halfcheetah, walker_2d
+#     task.stochastic: true
+#     algo: me
