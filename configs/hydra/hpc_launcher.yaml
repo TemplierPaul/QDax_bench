@@ -12,17 +12,22 @@ sweep:
 
 launcher:
   replace_hydra: hpc_basic
-  hpc: 
-  email: 
-  job_name: 
+  hpc: ptemplie@login.cx3.hpc.imperial.ac.uk
+  email: p.templier@imperial.ac.uk
+  job_name: QDaxBench
   walltime: 11:50:00
   nnodes: 1
   ncpus: 4
   mem: 16gb
   ngpus: 1
   gpu_type: L40S
-  njobs: 2
-  n_runs_per_job: 3
+  njobs: 1
+  n_runs_per_job: 5
   add_seed: True
   container: latest
   run_jobs: true
+
+sweeper:
+  params:
+    task: kh_standard, kh_pointmaze, kh_snake
+    algo: me

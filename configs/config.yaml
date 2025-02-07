@@ -13,8 +13,8 @@ corrected_metrics:
   evals: 128
 
 wandb:
-  project: 
-  entity: 
-  use: False
+  project: QDax_bench
+  entity: p-templier-imperial-college-london
+  use: True
   tag: null
 

@@ -113,7 +113,8 @@ def main(cfg: DictConfig) -> None:
 
         if cfg.wandb.use:
             # Log the metrics to wandb
-            wandb_run.log(current_metrics)
+            for i in range(log_period):
+                wandb_run.log({k: v[i] for k, v in current_metrics.items()})
 
         key, subkey = jax.random.split(key)
         if cfg.corrected_metrics.use:
