@@ -1,0 +1,20 @@
+defaults:
+  - algo: me
+  - task: kh_pointmaze
+  - hydra: local
+  - _self_
+
+num_loops: 10
+seed: 42
+plots_dir: plots
+
+corrected_metrics: 
+  use: True
+  evals: 128
+
+wandb:
+  project: 
+  entity: 
+  use: False
+  tag: null
+

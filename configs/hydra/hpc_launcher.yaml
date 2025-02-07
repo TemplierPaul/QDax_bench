@@ -1,0 +1,28 @@
+defaults:
+  - override launcher: hpc_launcher
+  - _self_
+
+job:
+  chdir: True
+run:
+  dir: ./hpc/${now:%Y-%m-%d_%H%M%S_%f}
+sweep:
+  dir: ./hpc/${now:%Y-%m-%d_%H%M%S_%f}
+  subdir: ${hydra.job.num}
+
+launcher:
+  replace_hydra: hpc_basic
+  hpc: 
+  email: 
+  job_name: 
+  walltime: 11:50:00
+  nnodes: 1
+  ncpus: 4
+  mem: 16gb
+  ngpus: 1
+  gpu_type: L40S
+  njobs: 2
+  n_runs_per_job: 3
+  add_seed: True
+  container: latest
+  run_jobs: true

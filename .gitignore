@@ -1,0 +1,15 @@
+examples/plots/*
+examples/plots/*.png
+*.pyc
+apptainer/tmp/*
+apptainer/var_tmp/* 
+apptainer/*.sif
+plots/*
+output/*
+multirun/*
+hpc/*
+plot_count/*
+*.err
+*.out
+*.egg-info
+.venv/*
