@@ -7,25 +7,38 @@ import os
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "1"
 # Jax floating point precision
 # os.environ["JAX_ENABLE_X64"] = "True"
-
+print("Matplotlib dir:", os.environ["MPLCONFIGDIR"])
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")  # or "pdf", "svg", etc.
+
+print("Matplotlib backend:", matplotlib.get_backend())
 from tqdm import tqdm 
 import jax 
 import jax.numpy as jnp
+
+print("Jax version:", jax.__version__)
+# print("Jax backend:", jax.lib.xla_bridge.get_backend().platform)
+print("Jax devices:", jax.devices())
+assert jax.device_count() > 0, "No GPU found"
+
 from typing import Dict
 
 from qdax.utils.plotting import plot_map_elites_results 
 from qdax.utils.metrics import CSVLogger, default_qd_metrics
 from qdax.utils.uncertainty_metrics import reevaluation_function
 
+print("QDax imports done")
+
 from tqdm import tqdm
 from omegaconf import DictConfig, OmegaConf
 
 # Check there is a gpu
-assert jax.device_count() > 0, "No GPU found"
 import wandb
 import warnings
 import math
+
+print("Imports done")
 
 def set_env_params(cfg: DictConfig) -> Dict:
     if "env_params" not in cfg.algo.keys():

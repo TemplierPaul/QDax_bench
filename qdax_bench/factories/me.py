@@ -62,7 +62,7 @@ class MEFactory:
         repertoire, emitter_state = map_elites.init(
             init_variables, 
             centroids, 
-            key,
+            subkey,
         )
 
         plot_prefix = algo.plotting.algo_name.replace(" ", "_")
