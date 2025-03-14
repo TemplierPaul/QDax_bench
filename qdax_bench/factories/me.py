@@ -59,7 +59,7 @@ class MEFactory:
         # with jax.disable_jit():
         key, subkey = jax.random.split(key)
 
-        repertoire, emitter_state = map_elites.init(
+        repertoire, emitter_state, init_metrics = map_elites.init(
             init_variables, 
             centroids, 
             subkey,
@@ -75,6 +75,7 @@ class MEFactory:
             emitter, 
             repertoire, 
             emitter_state,
+            init_metrics,
             plot_prefix,
             scoring_fn,    
             )

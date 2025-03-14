@@ -74,6 +74,7 @@ def main(cfg: DictConfig) -> None:
         emitter, 
         repertoire, 
         emitter_state,
+        init_metrics,
         plot_prefix,
         scoring_fn, 
         ) = algo_factory.build(cfg)
@@ -97,7 +98,34 @@ def main(cfg: DictConfig) -> None:
     print("Log period:", log_period)
 
     metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
-    corrected_metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+
+    init_metrics["iteration"] = 0
+    init_metrics["time"] = 0.0
+    metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), metrics, init_metrics)
+
+    if cfg.wandb.use:
+        # Log the metrics to wandb
+        wandb_run.log({k: v[0] for k, v in init_metrics.items()})
+
+    if cfg.corrected_metrics.use:
+        corrected_metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+
+        corrected_repertoire = reevaluation_function(
+                repertoire=repertoire,
+                key=key,
+                empty_corrected_repertoire=empty_repertoire,
+                scoring_fn=scoring_fn, 
+                num_reevals=cfg.corrected_metrics.evals,
+            )
+        corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
+        corrected_current_metrics["iteration"] = 0
+        corrected_current_metrics["time"] = 0.0
+
+        corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
+
+        if cfg.wandb.use:
+            # Log the metrics to wandb with corrected prefix
+            wandb_run.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
 
     # csv_logger = CSVLogger(
     #     "mapelites-logs.csv",
@@ -146,10 +174,6 @@ def main(cfg: DictConfig) -> None:
 
             corrected_current_metrics["iteration"] = current_metrics["iteration"][-1]
             corrected_current_metrics["time"] = current_metrics["time"][-1]
-            # Add a dimension to the metrics
-            # print("Corrected current metrics: ", corrected_current_metrics)
-            # print("Corrected metrics: ", corrected_metrics)
-            # corrected_current_metrics = jax.tree.map(lambda x: x[0], corrected_current_metrics)
             corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
         # Log
         # csv_logger.log(jax.tree.map(lambda x: x[-1], metrics))    
