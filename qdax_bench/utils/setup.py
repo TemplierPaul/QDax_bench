@@ -2,7 +2,7 @@ import functools
 
 import jax
 import jax.numpy as jnp
-from qdax.environments import create, descriptor_extractor
+from qdax.environments import descriptor_extractor
 import flax.linen as nn
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.tasks.brax_envs import (
@@ -14,6 +14,8 @@ from qdax.utils.metrics import CSVLogger, default_qd_metrics
 from qdax.core.containers.mapelites_repertoire import (
     compute_cvt_centroids,
 )
+
+from qdax_bench.utils.environments import create
 
 def create_task(config, key):
     if "kheperax" in config["env"]:

@@ -7,10 +7,8 @@ import os
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "1"
 # Jax floating point precision
 # os.environ["JAX_ENABLE_X64"] = "True"
-print("Matplotlib dir:", os.environ["MPLCONFIGDIR"])
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use("Agg")  # or "pdf", "svg", etc.
 
 print("Matplotlib backend:", matplotlib.get_backend())
 from tqdm import tqdm 
@@ -104,8 +102,9 @@ def main(cfg: DictConfig) -> None:
     metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), metrics, init_metrics)
 
     if cfg.wandb.use:
+        # print(init_metrics)
         # Log the metrics to wandb
-        wandb_run.log({k: v[0] for k, v in init_metrics.items()})
+        wandb_run.log(init_metrics)
 
     if cfg.corrected_metrics.use:
         corrected_metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
