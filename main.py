@@ -214,6 +214,9 @@ def main(cfg: DictConfig) -> None:
         plt.savefig(figname, bbox_inches="tight")
         if cfg.wandb.use:
             wandb_run.log({"corrected_results": wandb.Image(fig)})
+
+    if cfg.wandb.use:
+        wandb_run.finish()
         
 
 if __name__ == "__main__":
