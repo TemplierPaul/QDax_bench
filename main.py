@@ -14,14 +14,15 @@ print("Matplotlib backend:", matplotlib.get_backend())
 from tqdm import tqdm 
 import jax 
 import jax.numpy as jnp
+import warnings
 
 print("Jax version:", jax.__version__)
 # print("Jax backend:", jax.lib.xla_bridge.get_backend().platform)
 print("Jax devices:", jax.devices())
 device = jax.devices()[0]
 # Fail if no GPU is available
-if "cuda" not in str(device):
-    raise RuntimeError("No GPU available. Please run on a GPU machine.")
+if "cuda" not in str(device).lower():
+    warnings.warn("No GPU available. Please run on a GPU machine.")
 
 from typing import Dict
 
@@ -36,7 +37,6 @@ from omegaconf import DictConfig, OmegaConf
 
 # Check there is a gpu
 import wandb
-import warnings
 import math
 
 print("Imports done")
