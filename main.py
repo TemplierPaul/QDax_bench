@@ -18,7 +18,10 @@ import jax.numpy as jnp
 print("Jax version:", jax.__version__)
 # print("Jax backend:", jax.lib.xla_bridge.get_backend().platform)
 print("Jax devices:", jax.devices())
-assert jax.device_count() > 0, "No GPU found"
+device = jax.devices()[0]
+# Fail if no GPU is available
+if "cuda" not in str(device):
+    raise RuntimeError("No GPU available. Please run on a GPU machine.")
 
 from typing import Dict
 
@@ -56,11 +59,6 @@ def main(cfg: DictConfig) -> None:
     algo = cfg.algo
     import os
     os.makedirs(cfg.plots_dir, exist_ok=True)
-    
-    wandb_run = None
-    if cfg.wandb.use:
-        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
-        wandb_run = wandb.init(project=cfg.wandb.project, entity=cfg.wandb.entity, config=cfg_dict)
 
     algo_factory = hydra.utils.instantiate(cfg.algo.factory)
 
@@ -92,12 +90,20 @@ def main(cfg: DictConfig) -> None:
     num_generations = math.ceil(task.total_evaluations / evals_per_gen) 
     log_period = math.ceil(task.total_evaluations / evals_per_gen / cfg.num_loops)
 
+    wandb_run = None
+    if cfg.wandb.use:
+        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+        cfg_dict["evals_per_gen"] = evals_per_gen
+        cfg_dict["num_generations"] = num_generations
+        cfg_dict["log_period"] = log_period
+        wandb_run = wandb.init(project=cfg.wandb.project, entity=cfg.wandb.entity, config=cfg_dict)
+
     print("Total generations:", num_generations)
     print("Log period:", log_period)
 
-    metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+    metrics = dict.fromkeys(["generation", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
 
-    init_metrics["iteration"] = 0
+    init_metrics["generation"] = 0
     init_metrics["time"] = 0.0
     metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), metrics, init_metrics)
 
@@ -107,7 +113,7 @@ def main(cfg: DictConfig) -> None:
         wandb_run.log(init_metrics)
 
     if cfg.corrected_metrics.use:
-        corrected_metrics = dict.fromkeys(["iteration", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+        corrected_metrics = dict.fromkeys(["generation", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
 
         corrected_repertoire = reevaluation_function(
                 repertoire=repertoire,
@@ -117,7 +123,7 @@ def main(cfg: DictConfig) -> None:
                 num_reevals=cfg.corrected_metrics.evals,
             )
         corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
-        corrected_current_metrics["iteration"] = 0
+        corrected_current_metrics["generation"] = 0
         corrected_current_metrics["time"] = 0.0
 
         corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
@@ -147,7 +153,7 @@ def main(cfg: DictConfig) -> None:
         timelapse = time.time() - start_time
 
         # Metrics
-        current_metrics["iteration"] = jnp.arange(1+log_period*i, 1+log_period*(i+1), dtype=jnp.int32)
+        current_metrics["generation"] = jnp.arange(1+log_period*i, 1+log_period*(i+1), dtype=jnp.int32)
         current_metrics["time"] = jnp.repeat(timelapse, log_period)
         metrics = jax.tree.map(lambda metric, current_metric: jnp.concatenate([metric, current_metric], axis=0), metrics, current_metrics)
 
@@ -171,13 +177,13 @@ def main(cfg: DictConfig) -> None:
                 # Log the metrics to wandb with corrected prefix
                 wandb_run.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
 
-            corrected_current_metrics["iteration"] = current_metrics["iteration"][-1]
+            corrected_current_metrics["generation"] = current_metrics["generation"][-1]
             corrected_current_metrics["time"] = current_metrics["time"][-1]
             corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
         # Log
         # csv_logger.log(jax.tree.map(lambda x: x[-1], metrics))    
 
-    env_steps = metrics["iteration"]
+    env_steps = metrics["generation"]
 
     # Create the plots and the grid
     fig, axes = plot_map_elites_results(env_steps=env_steps, metrics=metrics, repertoire=repertoire, min_descriptor=min_descriptor, max_descriptor=max_descriptor)
@@ -203,7 +209,7 @@ def main(cfg: DictConfig) -> None:
             scoring_fn=scoring_fn, 
             num_reevals=cfg.corrected_metrics.evals,
         )
-        env_steps = corrected_metrics["iteration"]
+        env_steps = corrected_metrics["generation"]
 
         # Plot corrected metrics
         fig, axes = plot_map_elites_results(env_steps=env_steps, metrics=corrected_metrics, repertoire=corrected_repertoire, min_descriptor=min_descriptor, max_descriptor=max_descriptor)
