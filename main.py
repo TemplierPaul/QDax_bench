@@ -26,11 +26,11 @@ if "cuda" not in str(device).lower():
 
 from typing import Dict
 
-from qdax.utils.plotting import plot_map_elites_results 
 from qdax.utils.metrics import CSVLogger, default_qd_metrics
 from qdax.utils.uncertainty_metrics import reevaluation_function
 
 print("QDax imports done")
+from qdax_bench.utils.plotting import plot_map_elites_results 
 
 from tqdm import tqdm
 from omegaconf import DictConfig, OmegaConf
@@ -101,9 +101,10 @@ def main(cfg: DictConfig) -> None:
     print("Total generations:", num_generations)
     print("Log period:", log_period)
 
-    metrics = dict.fromkeys(["generation", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+    metrics = dict.fromkeys(["generation", "evaluations", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
 
     init_metrics["generation"] = 0
+    init_metrics["evaluations"] = 0
     init_metrics["time"] = 0.0
     metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), metrics, init_metrics)
 
@@ -113,7 +114,7 @@ def main(cfg: DictConfig) -> None:
         wandb_run.log(init_metrics)
 
     if cfg.corrected_metrics.use:
-        corrected_metrics = dict.fromkeys(["generation", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
+        corrected_metrics = dict.fromkeys(["generation", "evaluations", "qd_score", "coverage", "max_fitness", "time"], jnp.array([]))
 
         corrected_repertoire = reevaluation_function(
                 repertoire=repertoire,
@@ -124,6 +125,7 @@ def main(cfg: DictConfig) -> None:
             )
         corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
         corrected_current_metrics["generation"] = 0
+        corrected_current_metrics["evaluations"] = 0
         corrected_current_metrics["time"] = 0.0
 
         corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
@@ -154,6 +156,7 @@ def main(cfg: DictConfig) -> None:
 
         # Metrics
         current_metrics["generation"] = jnp.arange(1+log_period*i, 1+log_period*(i+1), dtype=jnp.int32)
+        current_metrics["evaluations"] = current_metrics["generation"] * evals_per_gen
         current_metrics["time"] = jnp.repeat(timelapse, log_period)
         metrics = jax.tree.map(lambda metric, current_metric: jnp.concatenate([metric, current_metric], axis=0), metrics, current_metrics)
 
@@ -178,16 +181,25 @@ def main(cfg: DictConfig) -> None:
                 wandb_run.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
 
             corrected_current_metrics["generation"] = current_metrics["generation"][-1]
+            corrected_current_metrics["evaluations"] = current_metrics["evaluations"][-1]
             corrected_current_metrics["time"] = current_metrics["time"][-1]
             corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
         # Log
         # csv_logger.log(jax.tree.map(lambda x: x[-1], metrics))    
 
-    env_steps = metrics["generation"]
+    # to numpy int64
+    evals = jax.device_get(metrics["evaluations"]).astype(int)
 
     # Create the plots and the grid
-    fig, axes = plot_map_elites_results(env_steps=env_steps, metrics=metrics, repertoire=repertoire, min_descriptor=min_descriptor, max_descriptor=max_descriptor)
-    fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.env_name}")
+    fig, axes = plot_map_elites_results(
+        env_steps=evals, 
+        metrics=metrics, 
+        repertoire=repertoire, 
+        min_descriptor=min_descriptor, 
+        max_descriptor=max_descriptor,
+        x_label="Evaluations",
+        )
+    fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name}")
 
 
     # figname = f"{cfg.plots_dir}/{cfg.task.env_name}/{plot_prefix}"+ "_results.png"
@@ -209,11 +221,18 @@ def main(cfg: DictConfig) -> None:
             scoring_fn=scoring_fn, 
             num_reevals=cfg.corrected_metrics.evals,
         )
-        env_steps = corrected_metrics["generation"]
+        evals = jax.device_get(corrected_metrics["evaluations"]).astype(int)
 
         # Plot corrected metrics
-        fig, axes = plot_map_elites_results(env_steps=env_steps, metrics=corrected_metrics, repertoire=corrected_repertoire, min_descriptor=min_descriptor, max_descriptor=max_descriptor)
-        fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.env_name} - Corrected")
+        fig, axes = plot_map_elites_results(
+            env_steps=evals,
+            metrics=corrected_metrics,
+            repertoire=corrected_repertoire,
+            min_descriptor=min_descriptor, 
+            max_descriptor=max_descriptor,
+            x_label="Evaluations",
+        )
+        fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name} - Corrected")
         figname = f"{cfg.plots_dir}/{cfg.task.env_name}_{plot_prefix}_corrected"
         os.makedirs(os.path.dirname(figname), exist_ok=True)
         print("Save corrected figure in: ", figname)
