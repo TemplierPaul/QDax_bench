@@ -176,13 +176,14 @@ def main(cfg: DictConfig) -> None:
             )
             corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
 
+            corrected_current_metrics["generation"] = current_metrics["generation"][-1]
+            corrected_current_metrics["evaluations"] = current_metrics["evaluations"][-1]
+            corrected_current_metrics["time"] = current_metrics["time"][-1]
+
             if cfg.wandb.use:
                 # Log the metrics to wandb with corrected prefix
                 wandb_run.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
 
-            corrected_current_metrics["generation"] = current_metrics["generation"][-1]
-            corrected_current_metrics["evaluations"] = current_metrics["evaluations"][-1]
-            corrected_current_metrics["time"] = current_metrics["time"][-1]
             corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
         # Log
         # csv_logger.log(jax.tree.map(lambda x: x[-1], metrics))    
