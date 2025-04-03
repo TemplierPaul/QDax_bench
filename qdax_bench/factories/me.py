@@ -12,10 +12,10 @@ from qdax.utils.plotting import plot_map_elites_results
 
 class MEFactory:
     def build(self, cfg):
-        task = cfg.task
-        algo = cfg.algo
+        task = cfg["task"]
+        algo = cfg["algo"]
 
-        batch_size = task.es_params.popsize
+        batch_size = task["es_params"]["popsize"]
         cfg["initial_batch"] = batch_size
 
         # if hasattr(task, "legacy_spring"):
@@ -49,7 +49,7 @@ class MEFactory:
         ) = setup_qd(cfg)
 
 
-        emitter = hydra.utils.instantiate(cfg.algo.emitter)
+        emitter = hydra.utils.instantiate(algo["emitter"])
         print("Emitter: ", emitter)
 
         map_elites = MAPElites(
@@ -67,7 +67,7 @@ class MEFactory:
             subkey,
         )
 
-        plot_prefix = algo.plotting.algo_name.replace(" ", "_")
+        plot_prefix = algo["plotting"]["algo_name"].replace(" ", "_")
 
         return (
             min_bd, 

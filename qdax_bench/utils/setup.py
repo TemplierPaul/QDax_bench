@@ -23,15 +23,15 @@ from qdax.tasks.brax.v2.env_creators import create_brax_scoring_fn as create_bra
 
 
 def create_task(config, key):
-    if "kheperax" in config["task"]["env"]:
+    if "kheperax" in config["task"]["env_name"]:
         from kheperax.tasks.final_distance import FinalDistKheperaxTask
         from kheperax.tasks.target import TargetKheperaxConfig
         from kheperax.tasks.quad import make_quad_config
 
-        map_name = config["task"]["env"].replace("kheperax_", "").replace("kheperax-", "")
+        map_name = config["task"]["env_name"].replace("kheperax_", "").replace("kheperax-", "")
         # Define Task configuration
         if "quad_" in map_name:
-            base_map_name = map_name.replace("quad_", "")
+            # base_map_name = map_name.replace("quad_", "")
             # print(f"Kheperax Quad: Using {base_map_name} as base map")
             # config_kheperax = QuadKheperaxConfig.get_default_for_map(base_map_name)
             config_kheperax = TargetKheperaxConfig.get_default_for_map(map_name)
@@ -44,7 +44,7 @@ def create_task(config, key):
 
         
         config_kheperax.episode_length = config["task"]["episode_length"]
-        config_kheperax.mlp_policy_hidden_layer_sizes = config["task"]["network"]["policy_hidden_layer_sizes"]
+        config_kheperax.mlp_policy_hidden_layer_sizes = tuple(config["task"]["network"]["policy_hidden_layer_sizes"])
 
         (
             env,
@@ -65,7 +65,7 @@ def create_task(config, key):
             brax = brax_v1
             create_brax_scoring_fn = create_brax_scoring_fn_v1
             env = brax_v1.create(
-                config["task"]["env"], 
+                config["task"]["env_name"], 
                 episode_length=config["task"]["episode_length"],
                 legacy_spring=config["task"]["brax"]["legacy_spring"],
                 )
@@ -73,7 +73,7 @@ def create_task(config, key):
             brax = brax_v2
             create_brax_scoring_fn = create_brax_scoring_fn_v2
             env = brax.create(
-                config["task"]["env"],
+                config["task"]["env_name"],
                 episode_length=config["task"]["episode_length"],
                 backend=config["task"]["brax"]["backend"],
             )
@@ -101,7 +101,8 @@ def create_task(config, key):
 
         activation = activations[config["task"]["network"]["activation"]]
 
-        policy_layer_sizes = config["task"]["network"]["policy_hidden_layer_sizes"] + (env.action_size,)
+        policy_layer_sizes = config["task"]["network"]["policy_hidden_layer_sizes"] + [env.action_size]
+        policy_layer_sizes = tuple(policy_layer_sizes)
         policy_network = MLP(
             layer_sizes=policy_layer_sizes,
             kernel_init=jax.nn.initializers.lecun_uniform(),
@@ -110,10 +111,10 @@ def create_task(config, key):
         )
         
         # Prepare the scoring function
-        reward_offset = brax.reward_offset[config["task"]["env"]]
+        reward_offset = brax.reward_offset[config["task"]["env_name"]]
         qd_offset = reward_offset * config["task"]["episode_length"]
 
-        descriptor_extraction_fn = brax.descriptor_extractor[config["task"]["env"]]
+        descriptor_extraction_fn = brax.descriptor_extractor[config["task"]["env_name"]]
         scoring_fn = create_brax_scoring_fn(
             env=env,
             policy_network=policy_network,
