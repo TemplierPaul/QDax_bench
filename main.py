@@ -73,7 +73,7 @@ def main(cfg: DictConfig) -> None:
         init_metrics,
         plot_prefix,
         scoring_fn, 
-        ) = algo_factory.build(cfg)
+        ) = algo_factory.build(OmegaConf.to_container(cfg, resolve=True))
     
     # Empty repertoire for corrected metrics
     empty_repertoire = repertoire.replace(
