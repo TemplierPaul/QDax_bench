@@ -96,6 +96,19 @@ def main(cfg: DictConfig) -> None:
         cfg_dict["evals_per_gen"] = evals_per_gen
         cfg_dict["num_generations"] = num_generations
         cfg_dict["log_period"] = log_period
+
+        try:
+            # Get QDax commit hash
+            cmd = "pip freeze | grep qdax"
+            output = os.popen(cmd).read()
+            # Format qdax @ git+https://github.com/adaptive-intelligent-robotics/QDax.git@dcdc098fee1dad99f264e80f31208ccfd4a06a12
+            qdax_commit = output.split("@")[-1].strip()
+            cfg_dict["qdax_commit"] = qdax_commit
+            # Add link to commit
+            cfg_dict["qdax_commit_link"] = f"https://github.com/adaptive-intelligent-robotics/QDax/commit/{qdax_commit}"
+        except:
+            print("Could not get QDax commit hash. Skipping.")
+
         wandb_run = wandb.init(project=cfg.wandb.project, entity=cfg.wandb.entity, config=cfg_dict)
 
     print("Total generations:", num_generations)

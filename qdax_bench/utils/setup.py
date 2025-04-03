@@ -15,7 +15,7 @@ from qdax.core.containers.mapelites_repertoire import (
     compute_cvt_centroids,
 )
 
-from qdax_bench.utils.environments import create
+from qdax.environments import create
 
 def create_task(config, key):
     if "kheperax" in config["env"]:
