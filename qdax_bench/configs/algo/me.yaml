@@ -9,6 +9,10 @@ archive:
 factory: 
   _target_: qdax_bench.factories.me.MEFactory
 
+repertoire_init:
+  _target_: qdax.core.containers.mapelites_repertoire.MapElitesRepertoire.init
+  _partial_: true
+
 emitter: 
   _target_: qdax.core.emitters.standard_emitters.MixingEmitter
   # _partial_: true

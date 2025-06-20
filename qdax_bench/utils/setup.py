@@ -79,7 +79,7 @@ def create_task(config, key):
             )
         else:
             raise NotImplementedError(
-                f"brax version {config["task"]['brax']["version"]} not supported, choose one of ['v1', 'v2']"
+                f"brax version {config['task']['brax']['version']} not supported, choose one of ['v1', 'v2']"
             )
 
         if env.descriptor_length != 2:

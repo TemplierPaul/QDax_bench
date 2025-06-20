@@ -41,7 +41,6 @@ class PGAMEFactory:
             metrics_function=metrics_fn,
         )
 
-        # with jax.disable_jit():
         key, subkey = jax.random.split(key)
 
         repertoire, emitter_state, init_metrics = map_elites.init(

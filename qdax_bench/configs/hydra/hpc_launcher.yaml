@@ -25,7 +25,7 @@ launcher:
   n_runs_per_job: 5
   add_seed: True
   container: latest
-  run_jobs: true
+  run_jobs: false
 
 # sweeper:
 #   params:
