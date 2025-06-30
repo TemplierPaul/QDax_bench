@@ -1,0 +1,12 @@
+defaults:
+  - brax_base # Inherit all settings from brax
+  - _self_ # Allow overriding inherited values
+
+env_name: walker2d_uni
+
+plotting:
+  task_name: Walker2D ${task.brax.version}
+  fitness_bounds: [0, 6000]
+  max_eval_cell: 6
+
+total_evaluations: 1e7

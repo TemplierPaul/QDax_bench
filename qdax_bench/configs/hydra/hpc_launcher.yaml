@@ -15,7 +15,7 @@ launcher:
   hpc: ptemplie@login.cx3.hpc.imperial.ac.uk
   email: p.templier@imperial.ac.uk
   job_name: QDaxBench
-  walltime: 11:50:00
+  walltime: 11:59:00
   nnodes: 1
   ncpus: 4
   mem: 16gb
@@ -25,16 +25,16 @@ launcher:
   n_runs_per_job: 5
   add_seed: True
   container: latest
-  run_jobs: true
-
-sweeper:
-  params:
-    task: kh_standard, kh_pointmaze, kh_snake
-    task.stochastic: true
-    algo: me
+  run_jobs: false
 
 # sweeper:
 #   params:
-#     task: halfcheetah, walker_2d
+#     task: kh_standard, kh_pointmaze, kh_snake
 #     task.stochastic: true
 #     algo: me
+
+sweeper:
+  params:
+    task: halfcheetah, walker_2d
+    task.stochastic: true, false
+    algo: me, pga_me

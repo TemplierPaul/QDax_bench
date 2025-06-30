@@ -1,0 +1,19 @@
+archive:
+  num_init_cvt_samples: 5000
+  num_centroids: 1024
+
+repertoire_init:
+  _target_: qdax.core.containers.mapelites_repertoire.MapElitesRepertoire.init
+  _partial_: true
+
+# params: ${oc.select:algo.group_defaults.${task.setup_type}, ${algo.group_defaults.kheperax}}
+params: ${algo.group_defaults.${task.setup_type}}
+# params: ${oc.select:${algo.env_params.${task.env_name}, ${algo.group_defaults.kheperax}}
+
+# env_params:
+#   kheperax_pointmaze: ${algo.group_defaults.kheperax}
+#   kheperax_snake: ${algo.group_defaults.kheperax}
+#   kheperax_standard: ${algo.group_defaults.kheperax}
+#   halfcheetah_uni: ${algo.group_defaults.brax}
+#   walker2d_uni: ${algo.group_defaults.brax}
+#   antmaze: ${algo.group_defaults.brax}

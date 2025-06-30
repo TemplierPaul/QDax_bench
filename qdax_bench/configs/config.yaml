@@ -1,12 +1,11 @@
 defaults:
   - algo: me
-  - task: kh_pointmaze
+  - task: optim/arm
   - hydra: local
   - _self_
 
 num_loops: 10
 seed: 42
-plots_dir: plots
 
 corrected_metrics: 
   use: True
@@ -15,6 +14,8 @@ corrected_metrics:
 wandb:
   project: QDax_bench
   entity: p-templier-imperial-college-london
-  use: True
+  use: False
   tag: null
 
+log_csv: True
+plot: True

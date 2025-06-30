@@ -1,0 +1,43 @@
+config_origin: QDax_bench
+
+setup_type: bbob
+
+function_name: sphere
+
+task_builder:
+  _target_: qdax_bench.tasks.bbob.bbob.BBOBTask
+  _partial_: true
+  num_dims: ${task.search_space.n_dimensions}
+  descriptor: gaussian_random_projection
+  descriptor_size: ${task.descriptors.n_dimensions}
+  fn_name: ${task.function_name}
+  task_seed: 0
+  f_opt_range: [0.0, 0.0]
+  clip_x: False
+  sample_rotation: False
+  noise_model: ${task.noise.model}
+  noise_stabilization: ${task.noise.stabilize}
+
+plotting:
+  task_name: BBOB ${task.function_name} ${task.search_space.n_dimensions}D
+  fitness_bounds: [-1, 1]
+  max_eval_cell: 6
+
+total_evaluations: 1e5
+
+search_space:
+  minval: -5.0
+  maxval: 5.0
+  n_dimensions: 2 # search space dimensions
+
+descriptors:
+  minval: -5.0
+  maxval: 5.0
+  n_dimensions: 2 # 2D descriptors
+
+noise: 
+  model: noiseless  # "noiseless", "gaussian", "uniform", "cauchy", "additive"
+  stabilize: True
+
+qd_offset: 0.0
+

@@ -1,4 +1,6 @@
-env_name: kheperax_standard
+config_origin: QDax_bench
+
+setup_type: kheperax
 
 episode_length: 250
 stochastic: false
@@ -8,13 +10,8 @@ network:
   policy_hidden_layer_sizes: [8]
   activation: relu
 
-es_params:
-  sigma_init: 0.05
-  popsize: 16
-  es_type: Sep_CMA_ES
-
 plotting:
-  task_name: Kheperax Standard
+  task_name: Kheperax Base
   fitness_bounds: [-350, -150]
   max_eval_cell: 5.5
 

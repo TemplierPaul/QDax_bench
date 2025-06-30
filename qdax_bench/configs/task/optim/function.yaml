@@ -1,0 +1,38 @@
+config_origin: QDax_bench
+
+setup_type: optim
+
+function_name: rastrigin
+
+plotting:
+  task_name: ${task.function_name} ${task.search_space.n_dimensions}D
+  fitness_bounds: [-1, 1]
+  max_eval_cell: 6
+
+total_evaluations: 1e5
+
+function_scoring:
+  rastrigin: qdax.tasks.standard_functions.rastrigin_scoring_function
+  sphere: qdax.tasks.standard_functions.sphere_scoring_function
+  rastrigin_proj: qdax.tasks.standard_functions.rastrigin_proj_scoring_function
+
+scoring_function:
+  _target_: ${task.function_scoring.${task.function_name}}
+  _partial_: true
+
+search_space:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 100 # num DoF arm
+
+descriptors:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 2 # 2D descriptors
+
+qd_offset: 0.0
+
+function_qd_offset:
+  rastrigin: 1300
+  sphere: 200
+  rastrigin_proj: 0.0

@@ -1,0 +1,16 @@
+defaults:
+- brax_base  # Inherit all settings from brax
+- _self_ # Allow overriding inherited values
+
+env_name: halfcheetah_uni
+
+plotting:
+  task_name: HalfCheetah ${task.brax.version} Debug
+  fitness_bounds: [-500, 7000]
+  max_eval_cell: 6
+
+episode_length: 100
+total_evaluations: 1e5
+
+brax:
+  version: v1

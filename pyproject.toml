@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qdax_bench"
+version = "0.1.0"
+description = "Benchmarking for Quality-Diversity algorithms in JAX"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Paul Templier", email = "templier.paul@gmail.com" }]
+requires-python = ">=3.8"
+keywords = [
+  "Quality-Diversity",
+  "NeuroEvolution",
+  "Reinforcement Learning",
+  "JAX"
+]
+classifiers = [
+  "Development Status :: 0 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+dependencies = [
+  "qdax[cuda12]==0.5.0",
+  "brax==0.12.3",
+  "notebook",
+  "kheperax",
+  "hydra-core",
+  "hydra-joblib-launcher",
+  "wandb"
+]
+
+[project.urls]
+Homepage = "https://github.com/TemplierPaul/QDax_bench"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qdax_bench*"]
+
+[tool.setuptools.package-data]
+"qdax_bench.configs" = ["**/configs/*.yaml"]
+
+[tool.hydra]
+config_path = "configs"
+config_module = "qdax_bench.configs"

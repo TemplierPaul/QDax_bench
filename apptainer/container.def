@@ -16,6 +16,9 @@ From: apptainer/base.sif
     # Clone repository to /workdir/
 	git clone https://{{ github_user }}:{{ github_token }}@github.com/TemplierPaul/QDax_bench.git /workdir/
 	# git checkout {{ commit }}  
+	cd /workdir/
+	git checkout feat/brax-v2
+	cd
 
 	# Output directory 
 	mkdir -p /workdir/output

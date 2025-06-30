@@ -7,9 +7,11 @@ apptainer/*.sif
 plots/*
 output/*
 multirun/*
+sweep/*
 hpc/*
 plot_count/*
 *.err
 *.out
 *.egg-info
 .venv/*
+develop.venv/*

@@ -1,0 +1,16 @@
+defaults:
+  - brax_base # Inherit all settings from brax
+  - _self_ # Allow overriding inherited values
+
+env_name: antmaze
+
+brax_version: v1 # brax version: v1 or v2
+
+plotting:
+  task_name: AntMaze ${task.brax.version}
+  fitness_bounds: [-8000, 2000]
+  max_eval_cell: 6
+
+episode_length: 250
+total_evaluations: 1e7
+
