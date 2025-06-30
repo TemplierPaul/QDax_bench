@@ -13,9 +13,6 @@ class PGAMEFactory:
         task = cfg["task"]
         algo = cfg["algo"]
 
-        batch_size = task["es_params"]["popsize"]
-        cfg["initial_batch"] = batch_size
-
         (
             centroids, 
             min_bd, 

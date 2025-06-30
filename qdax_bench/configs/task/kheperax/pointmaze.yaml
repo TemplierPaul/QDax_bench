@@ -1,5 +1,5 @@
 defaults:
-  - kh_standard # Inherit all settings from standard.yaml
+  - kh_base # Inherit all settings from standard.yaml
   - _self_ # Allow overriding inherited values
 
 env_name: kheperax_pointmaze
@@ -10,7 +10,3 @@ plotting:
   task_name: Kheperax PointMaze
   fitness_bounds: [-400, -100]
   max_eval_cell: 5.5
-
-descriptors:
-  minval: [0.0, 0.0]
-  maxval: [1.0, 1.0]

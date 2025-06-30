@@ -1,0 +1,26 @@
+config_origin: QDax_bench
+
+setup_type: optim
+
+plotting:
+  task_name: Arm ${task.search_space.n_dimensions}D
+  fitness_bounds: [-1, 1]
+  max_eval_cell: 6
+
+total_evaluations: 1e5
+
+scoring_function:
+  _target_: qdax.tasks.arm.arm_scoring_function
+  _partial_: true
+
+search_space:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 100 # num DoF arm
+
+descriptors:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 2 # 2D descriptors
+
+qd_offset: 0.0

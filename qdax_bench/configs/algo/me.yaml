@@ -1,17 +1,15 @@
+defaults:
+  - default_qd # Inherit all settings from default_qd
+  - _self_ # Allow overriding inherited values
+
+config_origin: QDax_bench
+
 plotting:
   algo_name: MAP-Elites
-
-archive:
-  num_init_cvt_samples: 5000
-  num_centroids: 1024
 
 # Factory
 factory: 
   _target_: qdax_bench.factories.me.MEFactory
-
-repertoire_init:
-  _target_: qdax.core.containers.mapelites_repertoire.MapElitesRepertoire.init
-  _partial_: true
 
 emitter: 
   _target_: qdax.core.emitters.standard_emitters.MixingEmitter
@@ -25,6 +23,8 @@ emitter:
   variation_percentage: 1.0
   mutation_fn: null
 
+initial_batch: ${algo.params.batch_size}
+
 group_defaults:
   kheperax:
     iso_sigma: 0.2
@@ -34,13 +34,11 @@ group_defaults:
     iso_sigma: 0.005
     line_sigma: 0.05
     batch_size: 1024
-
-params: ${oc.select:algo.env_params.${task.env_name}, ${algo.group_defaults.kheperax}}
-
-env_params:
-  kheperax_pointmaze: ${algo.group_defaults.kheperax}
-  kheperax_snake: ${algo.group_defaults.kheperax}
-  kheperax_standard: ${algo.group_defaults.kheperax}
-  halfcheetah_uni: ${algo.group_defaults.brax}
-  walker2d_uni: ${algo.group_defaults.brax}
-  antmaze: ${algo.group_defaults.brax}
+  optim:
+    iso_sigma: 0.005
+    line_sigma: 0.05
+    batch_size: 256
+  bbob:
+    iso_sigma: 0.005
+    line_sigma: 0.05
+    batch_size: 256

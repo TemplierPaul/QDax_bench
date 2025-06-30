@@ -1,3 +1,7 @@
+defaults:
+  - brax_base # Inherit all settings from brax
+  - _self_ # Allow overriding inherited values
+
 env_name: antmaze
 
 brax_version: v1 # brax version: v1 or v2

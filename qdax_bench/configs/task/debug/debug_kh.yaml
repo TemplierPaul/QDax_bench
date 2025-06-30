@@ -1,5 +1,5 @@
 defaults:
-  - kh_standard # Inherit all settings from standard.yaml
+  - kh_base # Inherit all settings from standard.yaml
   - _self_ # Allow overriding inherited values
 
 env_name: kheperax_pointmaze

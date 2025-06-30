@@ -1,15 +1,15 @@
+defaults:
+  - default_qd # Inherit all settings from default_qd
+  - _self_ # Allow overriding inherited values
+
+config_origin: QDax_bench
+
 plotting:
   algo_name: PGA-ME
-
-archive:
-  num_init_cvt_samples: 5000
-  num_centroids: 1024
 
 # Factory
 factory: 
   _target_: qdax_bench.factories.pga_me.PGAMEFactory
-
-# config: ${oc.select:algo.env_config.${task.env_name}, ${algo.default_config}}
 
 emitter: 
   _target_: qdax.core.emitters.pga_me_emitter.PGAMEEmitter
@@ -59,13 +59,3 @@ group_defaults:
     critic_hidden_layer_size: [256, 256]
     num_pg_training_steps: 150
     num_critic_training_steps: 3000
-
-params: ${oc.select:algo.env_params.${task.env_name}, ${algo.group_defaults.kheperax}}
-
-env_params:
-  kheperax_pointmaze: ${algo.group_defaults.kheperax}
-  kheperax_snake: ${algo.group_defaults.kheperax}
-  kheperax_standard: ${algo.group_defaults.kheperax}
-  halfcheetah_uni: ${algo.group_defaults.brax}
-  walker2d_uni: ${algo.group_defaults.brax}
-  antmaze: ${algo.group_defaults.brax}

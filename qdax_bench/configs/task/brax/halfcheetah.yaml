@@ -1,5 +1,5 @@
 defaults:
-  - brax # Inherit all settings from brax
+  - brax_base # Inherit all settings from brax
   - _self_ # Allow overriding inherited values
 
 env_name: halfcheetah_uni

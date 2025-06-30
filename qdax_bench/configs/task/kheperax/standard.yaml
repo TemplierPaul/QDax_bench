@@ -1,0 +1,12 @@
+defaults:
+  - kh_base # Inherit all settings from standard.yaml
+  - _self_ # Allow overriding inherited values
+
+env_name: kheperax_standard
+
+total_evaluations: 2e6
+
+plotting:
+  task_name: Kheperax Standard
+  fitness_bounds: [-400, -100]
+  max_eval_cell: 5.5
