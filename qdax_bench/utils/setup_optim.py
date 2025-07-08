@@ -21,8 +21,8 @@ def setup_qd(config):
     min_param = config["task"]["search_space"]["minval"]
     max_param = config["task"]["search_space"]["maxval"]
 
-    init_variables = jax.random.uniform(
-        subkey,
+    init_variables_func = functools.partial(
+        jax.random.uniform,
         shape=(init_batch_size, num_param_dimensions),
         minval=min_param,
         maxval=max_param,
@@ -46,4 +46,4 @@ def setup_qd(config):
         key=subkey,
     )
 
-    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables, key
+    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables_func, key

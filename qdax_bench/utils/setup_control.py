@@ -119,15 +119,15 @@ def create_brax(config, key):
     
 
 def create_task(config, key):
-    if "kheperax" in config["task"]["env_name"]:
+    if "kheperax" in config["task"]["setup_type"]:
         return create_kheperax(config, key)
 
-    elif "brax" in config["task"]["env_name"]:
+    elif "brax" in config["task"]["setup_type"]:
         return create_brax(config, key)
     
     else:
         raise NotImplementedError(
-            f"Task {config['task']['env_name']} not detected"
+            f"Task {config['task']['setup_type']} not detected"
         )
     
 
@@ -156,9 +156,13 @@ def setup_pga(config):
 
     # Init population of controllers
     key, subkey = jax.random.split(key)
-    keys = jax.random.split(subkey, num=config["algo"]["initial_batch"])
+    
     fake_batch = jnp.zeros(shape=(config["algo"]["initial_batch"], env.observation_size))
-    init_variables = jax.vmap(policy_network.init)(keys, fake_batch)
+    # init_variables = jax.vmap(policy_network.init)(keys, fake_batch)
+
+    def init_variables_func(key):
+        keys = jax.random.split(key, num=config["algo"]["initial_batch"])
+        return jax.vmap(policy_network.init)(keys, fake_batch)
 
     metrics_function = functools.partial(
         default_qd_metrics,
@@ -176,8 +180,8 @@ def setup_pga(config):
         key=subkey,
     )
 
-    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables, key, env, policy_network
+    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables_func, key, env, policy_network
 
 def setup_qd(config):
-    centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables, key, env, policy_network = setup_pga(config)
-    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables, key
+    centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables_func, key, env, policy_network = setup_pga(config)
+    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables_func, key

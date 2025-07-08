@@ -8,12 +8,16 @@ run:
   dir: ./output/${now:%Y-%m-%d_%H%M%S_%f}
 sweep:
   dir: ./output/${now:%Y-%m-%d_%H%M%S_%f}
-  subdir: ${hydra.job.num}
+  subdir: ${task.plotting.task_name}
 
 launcher:
   n_jobs: 1
 
 sweeper:
   params:
-    task: debug, debug_brax
-    algo: me, pga_me
+    task: debug/debug_brax, debug/debug_kh, optim/arm, optim/bbob
+    algo: me
+
+    log_csv: False
+    plot: False
+    wandb.use: False

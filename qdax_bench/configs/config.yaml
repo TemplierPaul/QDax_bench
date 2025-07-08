@@ -6,6 +6,7 @@ defaults:
 
 num_loops: 10
 seed: 42
+plots_dir: plots
 
 corrected_metrics: 
   use: True
@@ -17,5 +18,7 @@ wandb:
   use: False
   tag: null
 
-log_csv: True
+csv:
+  use: True
+  subsample: 10
 plot: True

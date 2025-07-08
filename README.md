@@ -43,7 +43,7 @@ journey
         ES: 0
         JEDi: 0
     section Tasks
-        QD optim: 0: Focus
+        QD optim: 5
         Arm: 5
         Kheperax: 5
         Brax v1: 5

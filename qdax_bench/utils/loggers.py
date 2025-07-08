@@ -1,7 +1,8 @@
 import csv
-
+import jax.numpy as jnp
 import wandb
 from typing import Dict, List
+from omegaconf import OmegaConf
 
 class BaseLogger:
     """Base class for loggers."""
@@ -26,7 +27,7 @@ class CSVLogger(BaseLogger):
     during the training process.
     """
 
-    def __init__(self, filename: str, header: List) -> None:
+    def __init__(self, filename: str, header: List, subsample: int=0) -> None:
         """Create the csv logger, create a file and write the
         header.
 
@@ -36,6 +37,8 @@ class CSVLogger(BaseLogger):
         """
         self._filename = filename
         self._header = header
+        self.subsample = subsample # Subsample for batch logging
+
         with open(self._filename, "w") as file:
             writer = csv.DictWriter(file, fieldnames=self._header)
             # write the header
@@ -62,10 +65,15 @@ class CSVLogger(BaseLogger):
                 and each value is a list of floats representing the metric values.
         """
         n_logs = len(next(iter(metrics_dict.values())))
+        row_nb = jnp.arange(n_logs)
+        
+        if self.subsample > 1:
+            # Subsample the logs
+            row_nb = row_nb[row_nb % self.subsample == 0]
 
         rows = [
             {key: values[i] for key, values in metrics_dict.items()}
-            for i in range(n_logs)
+            for i in row_nb
         ]
         with open(self._filename, "a") as file:
             writer = csv.DictWriter(file, fieldnames=self._header)
@@ -134,3 +142,44 @@ class CombinedLogger(BaseLogger):
         for logger in self.loggers:
             logger.finish()
         print("Finished logging for all loggers.")
+
+
+def make_loggers(cfg, evals_per_gen, num_generations, log_period, metrics_names):    
+    loggers = []
+    corrected_loggers = []
+    wandb_run = None
+    if cfg.wandb.use:
+        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+        cfg_dict["evals_per_gen"] = evals_per_gen
+        cfg_dict["num_generations"] = num_generations
+        cfg_dict["log_period"] = log_period
+
+        wandb_logger = WandBLogger(cfg_dict)
+        wandb_run = wandb_logger.wandb_run
+        loggers.append(wandb_logger)
+        corrected_loggers.append(wandb_logger)
+
+    if cfg.csv.use:
+        # Initialize CSV logger
+        path = "mapelites-logs.csv"
+        csv_logger = CSVLogger(
+            path,
+            header=metrics_names,
+            subsample=cfg.csv.subsample,
+        )
+        print("CSV logger initialized at:", path)
+        loggers.append(csv_logger)
+
+        # Initialize CSV logger for corrected metrics
+        path = "mapelites-logs_corrected.csv"
+        csv_header = ["corrected_" + k for k in metrics_names]
+        csv_logger = CSVLogger(
+            path,
+            header=csv_header,
+        )
+        print("CSV logger for corrected metrics initialized at:", path)
+        corrected_loggers.append(csv_logger)
+
+    logger = CombinedLogger(loggers)
+    corrected_logger = CombinedLogger(corrected_loggers)
+    return logger, corrected_logger

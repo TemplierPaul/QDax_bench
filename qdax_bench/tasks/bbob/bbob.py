@@ -10,6 +10,38 @@ from qdax_bench.tasks.bbob.bbob_fns import bbob_fns
 from qdax_bench.tasks.bbob.bbob_noise import NoiseModel, NoiseParams
 
 
+def compute_descriptor_bounds(
+    x_range: Tuple[float, float],
+    num_dims: int,
+    descriptor_size: int,
+    n_sigma: float = 3.0,
+    projection: str = "gaussian_random_projection",
+) -> Tuple[float, float]:
+    """Compute probabilistic bounds on a Gaussian-projected descriptor value.
+
+    Args:
+        x_range: Tuple (a, b), the min and max possible values for each input dimension.
+        num_dims: Number of input dimensions.
+        descriptor_size: Size of the projected descriptor (number of output dims).
+        n_sigma: Number of standard deviations to include in the bound (default: 3 for ~99%).
+
+    Returns:
+        A tuple (lower_bound, upper_bound) on the descriptor value.
+    """
+    if projection == "gaussian_random_projection": 
+        a, b = x_range
+        max_x_sq = jnp.maximum(a ** 2, b ** 2)
+        variance = (num_dims * max_x_sq) / descriptor_size
+        std_dev = jnp.sqrt(variance)
+        bound = n_sigma * std_dev
+        return -bound, bound
+    elif projection == "random_index":
+        # For random index, the descriptor is a one-hot vector, so bounds are fixed
+        return x_range[0], x_range[1]
+    else:
+        raise ValueError(f"Unsupported projection type: {projection}. "
+                         "Supported types: 'gaussian_random_projection', 'random_index'.")
+
 @dataclass
 class BBOBParams:
     num_dims: jax.Array
@@ -83,6 +115,12 @@ class BBOBTask:
             maxval=self.f_opt_range[1],
         )
 
+        jax.debug.print(
+            "BBOB Task Parameters: x_opt={x_opt}, f_opt={f_opt}",
+            x_opt=x_opt,
+            f_opt=f_opt,
+        )
+
         # Sample noise model parameters
         noise_params = self.noise_model.sample_params(key_noise)
 
@@ -93,6 +131,13 @@ class BBOBTask:
             descriptor_params = self.random_index(key_desc)
         else:
             raise NotImplementedError
+
+        # Optimal descriptor value
+        d_opt = descriptor_params @ x_opt
+        jax.debug.print(
+            "BBOB Task Descriptor: d_opt={d_opt}",
+            d_opt=d_opt,
+        )
         
         if self.sample_rotation:
             key_r, key_q = jax.random.split(key)

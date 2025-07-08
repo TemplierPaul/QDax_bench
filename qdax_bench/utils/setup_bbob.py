@@ -9,7 +9,7 @@ import hydra
 
 from qdax.utils.metrics import CSVLogger, default_qd_metrics
 from qdax.core.containers.mapelites_repertoire import compute_cvt_centroids
-from qdax_bench.tasks.bbob.bbob import BBOBTask
+from qdax_bench.tasks.bbob.bbob import BBOBTask, compute_descriptor_bounds
 
 def setup_qd(config):
     key = jax.random.PRNGKey(config["seed"])
@@ -23,7 +23,6 @@ def setup_qd(config):
         config["task"]["task_builder"],
     )(
         x_range = x_range,
-        x_opt_range = x_range
     )
 
     bbob_params = bbob_task.get_bbob_params()
@@ -37,8 +36,8 @@ def setup_qd(config):
     min_param = config["task"]["search_space"]["minval"]
     max_param = config["task"]["search_space"]["maxval"]
 
-    init_variables = jax.random.uniform(
-        subkey,
+    init_variables_func = functools.partial(
+        jax.random.uniform,
         shape=(init_batch_size, num_param_dimensions),
         minval=min_param,
         maxval=max_param,
@@ -51,8 +50,13 @@ def setup_qd(config):
 
     # Compute the centroids
     key, subkey = jax.random.split(key)
-    min_bd = config["task"]["descriptors"]["minval"]
-    max_bd = config["task"]["descriptors"]["maxval"]
+    min_bd, max_bd = compute_descriptor_bounds(
+        x_range=x_range,
+        num_dims=config["task"]["search_space"]["n_dimensions"],
+        descriptor_size=config["task"]["descriptors"]["n_dimensions"],
+        n_sigma=config["task"]["descriptors"]["n_sigma"],
+    )
+    print(f"Descriptor bounds at {config['task']['descriptors']['n_sigma']}σ: {min_bd}, {max_bd}")
     centroids = compute_cvt_centroids(
         num_descriptors=config["task"]["descriptors"]["n_dimensions"],
         num_init_cvt_samples=config["algo"]["archive"]["num_init_cvt_samples"],
@@ -62,4 +66,4 @@ def setup_qd(config):
         key=subkey,
     )
 
-    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables, key
+    return centroids, min_bd, max_bd, scoring_fn, metrics_function, init_variables_func, key

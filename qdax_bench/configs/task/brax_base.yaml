@@ -7,12 +7,16 @@ brax:
   legacy_spring: false # For v1
   backend: spring # For v2
 
+brax_suffixes:
+  v1: v1 ${oc.if:${task.brax.legacy_spring}, "Legacy", ""}
+  v2: v2 ${task.brax.backend}
+
 stochastic: false
 episode_length: 1000
 total_evaluations: 1e7
 
 network:
-  policy_hidden_layer_sizes: [256, 256, 256]
+  policy_hidden_layer_sizes: [256, 256]
   activation: tanh
 
 descriptors:

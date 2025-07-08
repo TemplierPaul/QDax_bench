@@ -21,7 +21,7 @@ class MEFactory:
             max_bd, 
             scoring_fn, 
             metrics_fn, 
-            init_variables, 
+            init_variables_func, 
             key
         ) = setup_qd(cfg)
 
@@ -40,13 +40,9 @@ class MEFactory:
             repertoire_init=repertoire_init_fn
         )
 
-        key, subkey = jax.random.split(key)
+        key, var_key, subkey = jax.random.split(key, 3)
 
-        repertoire, emitter_state, init_metrics = map_elites.init(
-            init_variables, 
-            centroids, 
-            subkey,
-        )
+        init_variables = init_variables_func(var_key)
 
         plot_prefix = algo["plotting"]["algo_name"].replace(" ", "_")
 
@@ -56,9 +52,8 @@ class MEFactory:
             key, 
             map_elites, 
             emitter, 
-            repertoire, 
-            emitter_state,
-            init_metrics,
+            init_variables, 
+            centroids,
             plot_prefix,
             scoring_fn,    
             )

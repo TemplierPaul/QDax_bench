@@ -11,6 +11,3 @@ plotting:
 
 episode_length: 100
 total_evaluations: 1e5
-
-brax:
-  version: v1

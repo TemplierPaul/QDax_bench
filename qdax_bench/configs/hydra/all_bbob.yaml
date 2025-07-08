@@ -16,11 +16,11 @@ launcher:
 sweeper:
   params:
     task: optim/bbob
-    task.function_name: sphere, ellipsoidal, rastrigin, bueche_rastrigin, linear_slope
-    #attractive_sector, step_ellipsoidal, rosenbrock, rosenbrock_rotated, ellipsoidal_rotated, discus, bent_cigar, sharp_ridge, different_powers, rastrigin_rotated, weierstrass, schaffers_f7, schaffers_f7_ill_cond, griewank_rosenbrock, schwefel, gallagher_101_me, gallagher_21_hi, katsuura, lunacek
-    algo: me
     seed: range(5)
+    # task.function_name: sphere, ellipsoidal, rastrigin, bueche_rastrigin, linear_slope, attractive_sector, step_ellipsoidal, rosenbrock, rosenbrock_rotated, ellipsoidal_rotated, discus, bent_cigar, sharp_ridge, different_powers, rastrigin_rotated, weierstrass, schaffers_f7, schaffers_f7_ill_cond, griewank_rosenbrock, schwefel, gallagher_101_me, gallagher_21_hi, katsuura, lunacek
+    task.function_name: sphere, ellipsoidal, rastrigin, bueche_rastrigin, linear_slope, attractive_sector, step_ellipsoidal, rosenbrock
+    algo: me
 
-    log_csv: True
+    csv.use: True
     plot: False
     wandb.use: False
