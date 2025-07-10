@@ -185,13 +185,17 @@ def run(cfg: DictConfig) -> None:
 
         corrected_logger.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
     
+    @jax.jit
     def scan_loop(repertoire, emitter_state, key):
         return jax.lax.scan(
-            jax.jit(map_elites.scan_update),
+            map_elites.scan_update,
             (repertoire, emitter_state, key),
             (),
             length=log_period,
         )
+
+    me_ask = jax.jit(map_elites.ask)
+    me_tell = jax.jit(map_elites.tell)
 
     def ask_tell_loop(repertoire, emitter_state, key):
         loop_metrics = dict.fromkeys(
@@ -200,7 +204,7 @@ def run(cfg: DictConfig) -> None:
         for i in range(log_period):
             key, subkey = jax.random.split(key)
             # Generate solutions
-            genotypes, extra_info = jax.jit(map_elites.ask)(repertoire, emitter_state, subkey)
+            genotypes, extra_info = me_ask(repertoire, emitter_state, subkey)
 
             # Evaluate solutions: get fitness, descriptor and extra scores.
             # This is where custom evaluations on CPU or GPU can be added.
@@ -208,7 +212,7 @@ def run(cfg: DictConfig) -> None:
             fitnesses, descriptors, extra_scores = scoring_fn(genotypes, subkey)
 
             # Update MAP-Elites
-            repertoire, emitter_state, current_metrics = jax.jit(map_elites.tell)(
+            repertoire, emitter_state, current_metrics = me_tell(
                 genotypes=genotypes,
                 fitnesses=fitnesses,
                 descriptors=descriptors,
