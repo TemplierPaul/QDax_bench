@@ -1,0 +1,13 @@
+defaults:
+  - me # Inherit all settings from me
+  - _self_ # Allow overriding inherited values
+
+plotting:
+  algo_name: DNS
+
+repertoire_init:
+  _target_: qdax_bench.core.containers.dns_repertoire.DNSRepertoire.init
+  _partial_: true
+  k: 15  # Number of neighbors to consider
+
+initial_batch: ${algo.archive.num_centroids} # Number of initial random solutions

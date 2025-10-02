@@ -1,0 +1,29 @@
+config_origin: QDax_bench
+
+setup_type: optim
+
+plotting:
+  task_name: Noisy Arm ${task.search_space.n_dimensions} D
+  fitness_bounds: [-1, 1]
+  max_eval_cell: 6
+
+total_evaluations: 1e7
+
+scoring_function:
+  _target_: qdax.tasks.arm.noisy_arm_scoring_function
+  _partial_: true
+  fit_variance: 0.1  # Variance of the Gaussian noise added to fitness evaluations
+  desc_variance: 0.0  # Variance of the Gaussian noise added to descriptor evaluations
+  params_variance: 0.0  # Variance of the Gaussian noise added to parameters evaluations
+
+search_space:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 10 # num DoF arm
+
+descriptors:
+  minval: 0.0
+  maxval: 1.0
+  n_dimensions: 2 # 2D descriptors
+
+qd_offset: 1.5

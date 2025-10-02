@@ -24,14 +24,15 @@ device = jax.devices()[0]
 if "cuda" not in str(device).lower():
     warnings.warn("No GPU available. Please run on a GPU machine.")
 
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 
 from qdax.utils.metrics import default_qd_metrics
 from qdax.utils.uncertainty_metrics import reevaluation_function
 
 print("QDax imports done")
-from qdax_bench.utils.plotting import plot_map_elites_results 
-from qdax_bench.utils.loggers import CSVLogger, WandBLogger, CombinedLogger
+from qdax_bench.utils.plotting import plot_map_elites_results, plot_repertoire_grid
+from qdax_bench.utils.loggers import CSVLogger, WandBLogger, CombinedLogger, make_loggers
+from qdax.core.containers.mapelites_repertoire import MapElitesRepertoire
 
 from tqdm import tqdm
 from omegaconf import DictConfig, OmegaConf
@@ -41,6 +42,28 @@ import wandb
 import math
 
 print("Imports done")
+
+def oc_if(cond: bool, true_val, false_val):
+    cond = str(cond).strip()
+    if cond.lower() == "true":
+        return true_val
+    elif cond.lower() == "false":
+        return false_val
+    else:
+        raise ValueError(f"Invalid condition: {cond}")
+    
+def oc_mult(val, factor):
+    return val * factor
+
+def oc_mult_int(val: int, factor: int) -> int:
+    return int(val * factor)
+
+OmegaConf.register_new_resolver("oc.if", oc_if)
+OmegaConf.register_new_resolver("oc.mult", oc_mult)
+OmegaConf.register_new_resolver("oc.mult_int", oc_mult_int)
+
+def net_shape(net):
+    return jax.tree.map(lambda x: x.shape, net)
 
 def clean_algo_cfg(cfg):
     # Resolve all interpolations (e.g., ${oc.select:...})
@@ -54,6 +77,12 @@ def clean_algo_cfg(cfg):
     # Convert back to OmegaConf if needed
     return OmegaConf.create(resolved)
 
+def empty_repertoire_like(repertoire):
+    return repertoire.replace(
+            fitnesses=jnp.ones_like(repertoire.fitnesses) * -jnp.inf,
+            extra_scores={k: jnp.zeros_like(v) for k, v in repertoire.extra_scores.items()}
+        )
+
 def run(cfg: DictConfig) -> None:
     cfg.algo = clean_algo_cfg(cfg)
     
@@ -62,6 +91,29 @@ def run(cfg: DictConfig) -> None:
     algo = cfg.algo
     import os
     os.makedirs(cfg.plots_dir, exist_ok=True)
+
+    plotting_function = task.plotting.get("plotting_function", None)
+    if plotting_function is None:
+        plotting_function = plot_map_elites_results
+        print("Using default plotting function:", plotting_function.__name__)
+    else:
+        plotting_function = hydra.utils.instantiate(cfg.task.plotting.plotting_function)
+        print("Using custom plotting function:", plotting_function)
+
+    archive_plotting_function = task.plotting.get("archive_plotting_function", None)
+    if archive_plotting_function is None:
+        archive_plotting_function = plot_repertoire_grid
+        print("Using default archive plotting function:", archive_plotting_function.__name__)
+    else:
+        archive_plotting_function = hydra.utils.instantiate(cfg.task.plotting.archive_plotting_function)
+        print("Using custom archive plotting function:", archive_plotting_function)
+
+    algo_plotting_function = algo.plotting.get("plotting_function", None)
+    if algo_plotting_function is None:
+        print("No algorithm plotting function specified.")
+    else:
+        algo_plotting_function = hydra.utils.instantiate(cfg.algo.plotting.plotting_function)
+        print("Using custom algorithm plotting function:", algo_plotting_function)
 
     algo_factory = hydra.utils.instantiate(cfg.algo.factory)
 
@@ -77,18 +129,51 @@ def run(cfg: DictConfig) -> None:
         plot_prefix,
         scoring_fn, 
         ) = algo_factory.build(OmegaConf.to_container(cfg, resolve=True))
-    
-    # Empty repertoire for corrected metrics
-    empty_repertoire = repertoire.replace(
-            fitnesses=jnp.ones_like(repertoire.fitnesses) * -jnp.inf
+
+    key, subkey = jax.random.split(key, 2)
+
+    ask_tell = task.get("ask_tell", False)
+
+    if ask_tell:
+        # Evaluate initial population
+        key_eval, key_init = jax.random.split(subkey)
+        fitnesses, descriptors, extra_scores = scoring_fn(init_variables, key_eval)
+        
+        # Initialize repertoire and emitter state
+        repertoire, emitter_state, init_metrics = map_elites.init_ask_tell(
+            genotypes=init_variables,
+            fitnesses=fitnesses,
+            descriptors=descriptors,
+            centroids=centroids,
+            key=key_init,
+            extra_scores=extra_scores,
         )
 
+    else:
+        repertoire, emitter_state, init_metrics = map_elites.init(
+                init_variables, 
+                centroids, 
+                subkey,
+            )
+
+    print(net_shape(repertoire.genotypes))
+    print(net_shape(repertoire.fitnesses))
+
+    # Empty repertoire for corrected metrics
+    # empty_repertoire = repertoire.replace(
+    #         fitnesses=jnp.ones_like(repertoire.fitnesses) * -jnp.inf
+    #     )
+
     # Check if emitter has evals_per_gen
-    if hasattr(emitter, "evals_per_gen"):
+    if hasattr(map_elites, "batch_size"):
+        evals_per_gen = map_elites.batch_size
+    elif hasattr(emitter, "evals_per_gen"):
         evals_per_gen = emitter.evals_per_gen
     else: 
         warnings.warn(f"Emitter does not have evals_per_gen attribute. Using batch size of {emitter.batch_size} instead.")
         evals_per_gen = emitter.batch_size
+
+    print("Evals per generation:", evals_per_gen)
 
     num_generations = math.ceil(task.total_evaluations / evals_per_gen) 
     log_period = math.ceil(task.total_evaluations / evals_per_gen / cfg.num_loops)
@@ -146,11 +231,12 @@ def run(cfg: DictConfig) -> None:
 
     if cfg.corrected_metrics.use:
         corrected_metrics = dict.fromkeys(metrics_names, jnp.array([]))
-
+        print(net_shape(repertoire.genotypes))
+        print(net_shape(repertoire.fitnesses))
         corrected_repertoire = reevaluation_function(
                 repertoire=repertoire,
                 key=key,
-                empty_corrected_repertoire=empty_repertoire,
+                empty_corrected_repertoire=empty_repertoire_like(repertoire),
                 scoring_fn=scoring_fn, 
                 num_reevals=cfg.corrected_metrics.evals,
             )
@@ -164,105 +250,162 @@ def run(cfg: DictConfig) -> None:
         corrected_logger.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
     
 
-    map_elites_scan_update = jax.jit(map_elites.scan_update)
-    for i in tqdm(range(cfg.num_loops)):
-        start_time = time.time()
-        (
-            repertoire,
-            emitter_state,
-            key,
-        ), current_metrics = jax.lax.scan(
-            map_elites_scan_update,
-            (repertoire, emitter_state, key),
-            (),
-            length=log_period,
-        )
-        timelapse = time.time() - start_time
-
-        # Metrics
-        current_metrics["generation"] = jnp.arange(1+log_period*i, 1+log_period*(i+1), dtype=jnp.int32)
-        current_metrics["evaluations"] = current_metrics["generation"] * evals_per_gen
-        current_metrics["time"] = jnp.repeat(timelapse, log_period)
-        metrics = jax.tree.map(lambda metric, current_metric: jnp.concatenate([metric, current_metric], axis=0), metrics, current_metrics)
-           
-        logger.batch_log(current_metrics)
-
-        key, subkey = jax.random.split(key)
-        if cfg.corrected_metrics.use:
-            corrected_repertoire = reevaluation_function(
+    try:
+        for i in tqdm(range(cfg.num_loops)):
+            start_time = time.time()
+            (
+                repertoire,
+                emitter_state,
+                key,
+            ), current_metrics = loop_fn(
                 repertoire=repertoire,
-                key=subkey,
-                empty_corrected_repertoire=empty_repertoire,
-                scoring_fn=scoring_fn, 
-                num_reevals=cfg.corrected_metrics.evals,
+                emitter_state=emitter_state,
+                key=key,
             )
-            corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
 
-            corrected_current_metrics["generation"] = current_metrics["generation"][-1]
-            corrected_current_metrics["evaluations"] = current_metrics["evaluations"][-1]
-            corrected_current_metrics["time"] = current_metrics["time"][-1]
+            timelapse = time.time() - start_time
 
-            corrected_logger.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
+            # Metrics
+            current_metrics["generation"] = jnp.arange(1+log_period*i, 1+log_period*(i+1), dtype=jnp.int32)
+            current_metrics["evaluations"] = current_metrics["generation"] * evals_per_gen + cfg["algo"]["initial_batch"]
+            current_metrics["time"] = jnp.repeat(timelapse, log_period)
+            metrics = jax.tree.map(lambda metric, current_metric: jnp.concatenate([metric, current_metric], axis=0), metrics, current_metrics)
+            
+            logger.batch_log(current_metrics)
 
-            corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
-
-
-    # to numpy int64
-    evals = jax.device_get(metrics["evaluations"]).astype(int)
-
-    if cfg.plot:
-        # Create the plots and the grid
-        fig, axes = plot_map_elites_results(
-            env_steps=evals, 
-            metrics=metrics, 
-            repertoire=repertoire, 
-            min_descriptor=min_descriptor, 
-            max_descriptor=max_descriptor,
-            x_label="Evaluations",
-            )
-        fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name}")
-        fig.tight_layout()
-
-        # figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}/{plot_prefix}"+ "_results.png"
-        figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}" #+ "_results.png"
-
-        os.makedirs(os.path.dirname(figname), exist_ok=True)
-        print("Save figure in: ", figname)
-        plt.savefig(figname, bbox_inches="tight")
-    
-        if cfg.wandb.use:
-            wandb_run.log({"final_results": wandb.Image(fig)})
-
-        if cfg.corrected_metrics.use:
             key, subkey = jax.random.split(key)
-            corrected_repertoire = reevaluation_function(
-                repertoire=repertoire,
-                key=subkey,
-                empty_corrected_repertoire=empty_repertoire,
-                scoring_fn=scoring_fn, 
-                num_reevals=cfg.corrected_metrics.evals,
-            )
-            evals = jax.device_get(corrected_metrics["evaluations"]).astype(int)
+            if cfg.corrected_metrics.use:
+                corrected_repertoire = reevaluation_function(
+                    repertoire=repertoire,
+                    key=subkey,
+                    empty_corrected_repertoire=empty_repertoire_like(repertoire),
+                    scoring_fn=scoring_fn, 
+                    num_reevals=cfg.corrected_metrics.evals,
+                )
+                corrected_current_metrics = map_elites._metrics_function(corrected_repertoire)
 
-            # Plot corrected metrics
-            fig, axes = plot_map_elites_results(
-                env_steps=evals,
-                metrics=corrected_metrics,
-                repertoire=corrected_repertoire,
+                corrected_current_metrics["generation"] = current_metrics["generation"][-1]
+                corrected_current_metrics["evaluations"] = current_metrics["evaluations"][-1]
+                corrected_current_metrics["time"] = current_metrics["time"][-1]
+
+                corrected_logger.log({"corrected_" + k: v for k, v in corrected_current_metrics.items()})
+
+                corrected_metrics = jax.tree.map(lambda metric, current_metric: jnp.append(metric, current_metric), corrected_metrics, corrected_current_metrics)
+
+    except KeyboardInterrupt:
+        print("Interrupted by user. Stopping...")
+
+    finally:
+        # to numpy int64
+        evals = jax.device_get(metrics["evaluations"]).astype(int)
+
+        if cfg.plot:
+            # # Check shapes
+            # print("Final repertoire centroids shape:", repertoire.centroids.shape)
+            # print("Final repertoire fitnesses shape:", repertoire.fitnesses.shape)
+            # print("Final repertoire descriptors shape:", repertoire.descriptors.shape)
+
+            # # Check inf
+            # print("Final repertoire centroids inf:", jnp.isinf(repertoire.centroids).any())
+            # print("Final repertoire fitnesses inf:", jnp.isinf(repertoire.fitnesses).any())
+            # print("Final repertoire descriptors inf:", jnp.isinf(repertoire.descriptors).any())
+
+            # # Check nan
+            # print("Final repertoire centroids nan:", jnp.isnan(repertoire.centroids).any())
+            # print("Final repertoire fitnesses nan:", jnp.isnan(repertoire.fitnesses).any())
+            # print("Final repertoire descriptors nan:", jnp.isnan(repertoire.descriptors).any())
+            
+            # Create the plots and the grid
+            fig, axes = plotting_function(
+                env_steps=evals, 
+                metrics=metrics, 
+                repertoire=repertoire, 
                 min_descriptor=min_descriptor, 
                 max_descriptor=max_descriptor,
                 x_label="Evaluations",
-            )
+                )
+            fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name}")
             fig.tight_layout()
 
-            fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name} - Corrected")
-            figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}_corrected"
+            # figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}/{plot_prefix}"+ "_results.png"
+            figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}".replace(".", "_")  #+ "_results.png"
+
             os.makedirs(os.path.dirname(figname), exist_ok=True)
-            print("Save corrected figure in: ", figname)
+            print("Save figure in: ", figname)
             plt.savefig(figname, bbox_inches="tight")
+
+            # Plot archive
+            fig, axes = archive_plotting_function(
+                repertoire=repertoire,
+                min_descriptor=min_descriptor, 
+                max_descriptor=max_descriptor,
+            )
+            fig.tight_layout()
+            fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name} - Archive")
+            figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}_archive".replace(".", "_") 
+            os.makedirs(os.path.dirname(figname), exist_ok=True)
+            print("Save archive figure in: ", figname)
+            plt.savefig(figname, bbox_inches="tight")
+
+            if algo_plotting_function is not None:
+                algo_plotting_function(
+                    cfg, 
+                    emitter_state,
+                    metrics,
+                    repertoire,
+                    min_descriptor,
+                    max_descriptor,
+                    title=f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name}"
+                )
+
             if cfg.wandb.use:
-                wandb_run.log({"corrected_results": wandb.Image(fig)})
+                corrected_logger.log({"final_results": wandb.Image(fig)})
+
+            if cfg.corrected_metrics.use:
+                key, subkey = jax.random.split(key)
+                corrected_repertoire = reevaluation_function(
+                    repertoire=repertoire,
+                    key=subkey,
+                    empty_corrected_repertoire=empty_repertoire_like(repertoire),
+                    scoring_fn=scoring_fn, 
+                    num_reevals=cfg.corrected_metrics.evals,
+                )
+                evals = jax.device_get(corrected_metrics["evaluations"]).astype(int)
+
+                # Plot corrected metrics
+                fig, axes = plotting_function(
+                    env_steps=evals,
+                    metrics=corrected_metrics,
+                    repertoire=corrected_repertoire,
+                    min_descriptor=min_descriptor, 
+                    max_descriptor=max_descriptor,
+                    x_label="Evaluations",
+                )
+                fig.tight_layout()
+
+                fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name} - Corrected")
+                figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}_corrected".replace(".", "_") 
+                os.makedirs(os.path.dirname(figname), exist_ok=True)
+                print("Save corrected figure in: ", figname)
+                plt.savefig(figname, bbox_inches="tight")
+                if cfg.wandb.use:
+                    corrected_logger.log({"corrected_results": wandb.Image(fig)})
+
+                # Plot archives
+                fig, axes = archive_plotting_function(
+                    repertoire=corrected_repertoire,
+                    min_descriptor=min_descriptor, 
+                    max_descriptor=max_descriptor,
+                )
+                fig.tight_layout()
+                fig.suptitle(f"{cfg.algo.plotting.algo_name} - {cfg.task.plotting.task_name} - Archive")
+                figname = f"{cfg.plots_dir}/{cfg.task.plotting.task_name}_{plot_prefix}_corrected_archive".replace(".", "_") 
+                os.makedirs(os.path.dirname(figname), exist_ok=True)
+                print("Save archive figure in: ", figname)
+                plt.savefig(figname, bbox_inches="tight")
+                if cfg.wandb.use:
+                    corrected_logger.log({"corrected_archive": wandb.Image(fig)})
 
     logger.finish()
     corrected_logger.finish()
-        
+    

@@ -12,7 +12,7 @@ episode_length: 1000
 total_evaluations: 1e7
 
 network:
-  policy_hidden_layer_sizes: [256, 256, 256]
+  policy_hidden_layer_sizes: [128, 128]
   activation: tanh
 
 descriptors:
