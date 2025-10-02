@@ -1,5 +1,14 @@
 # QDax Benchmark
 
+**This repository is still under development (WIP).**
+
+The goal of QDax_bench is to provide the infrastructure to easily benchmark Quality-Diversity algorithms on a variety of tasks, using [QDax](github.com/adaptive-intelligent-robotics/QDax).  
+
+New algorithms and tasks can be easily added using [Hydra](https://hydra.cc/docs/intro/).
+
+Algorithms are built using [factories](qdax_bench/factories), and tasks are built using [setup functions](qdax_bench/utils/setup.py).
+
+
 ## Install
 
 ```bash
@@ -12,7 +21,7 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-python main.py algo=jedi task=kh_standard
+python main.py algo=me task=kh_standard
 ```  
 
 ## Features
@@ -28,25 +37,6 @@ python main.py algo=jedi task=kh_standard
 
 - **ME**: MAP-Elites 
 - **PGA-ME**: Policy-Gradient Assisted MAP-Elites 
-
-## Development Status
-
-```mermaid
-journey
-    section Structure
-        hydra: 5
-        csv: 5
-        wandb: 5
-    section Algorithms
-        ME: 5
-        PGA-ME: 5
-        ES: 0
-        JEDi: 0
-    section Tasks
-        QD optim: 5
-        Arm: 5
-        Kheperax: 5
-        Brax v1: 5
-        Brax v2: 5
-```
-
+- **DNS**: Dominated Novelty Search 
+- **Extract-ME**: Extract MAP-Elites
+- **Extract-DNS**: Extract ME with a DNS archive
