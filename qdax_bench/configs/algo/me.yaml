@@ -29,16 +29,16 @@ group_defaults:
   kheperax:
     iso_sigma: 0.2
     line_sigma: 0.0
-    batch_size: 64  
+    batch_size: 4096  
   brax:
     iso_sigma: 0.005
     line_sigma: 0.05
-    batch_size: 1024
+    batch_size: 4096
   optim:
     iso_sigma: 0.005
     line_sigma: 0.05
-    batch_size: 4096
+    batch_size: 1024
   bbob:
     iso_sigma: 0.005
     line_sigma: 0.05
-    batch_size: 4096
+    batch_size: 256

@@ -1,0 +1,42 @@
+defaults:
+  - me # Inherit all settings from default_qd
+  - _self_ # Allow overriding inherited values
+
+archive:
+  num_init_cvt_samples: 5000
+  num_centroids: 1024
+
+config_origin: QDax_bench
+
+plotting:
+  algo_name: Extract-DNS
+
+# Factory
+factory: 
+  _target_: qdax_bench.factories.extract_me.MEFactory
+
+emitter: 
+  _target_: qdax.core.emitters.standard_emitters.MixingEmitter
+  # _partial_: true
+  variation_fn: 
+    _target_: qdax.core.emitters.mutation_operators.isoline_variation
+    _partial_: true
+    line_sigma: ${algo.params.line_sigma}
+    iso_sigma: ${algo.params.iso_sigma}
+  batch_size: ${oc.mult_int:${algo.params.batch_size}, ${algo.extract.emit_proportion}}
+  variation_percentage: 1.0
+  mutation_fn: null
+
+extract:
+  emit_proportion: 0.5
+  max_number_evals: 32
+  num_samples: 1
+  repertoire_num_samples: 1
+  extract_type: uniform
+
+repertoire_init:
+  _target_: qdax_bench.core.containers.extract_dns_repertoire.ExtractDNSRepertoire.init
+  _partial_: true
+  k: 30  # Number of neighbors to consider
+
+initial_batch: ${algo.archive.num_centroids} # Number of initial random solutions
